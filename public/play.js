@@ -52,6 +52,7 @@ function update() {
   const mine = snap.players.find(p => p.id === me.id);
   handleEvents();
   renderShop(mine);
+  soundState(mine);
   if (snap.state === 'lobby') {
     panel('wait');
   } else if (snap.state === 'playing') {
@@ -80,14 +81,21 @@ window.addEventListener('message', e => {
   if (!me || e.source !== f.contentWindow) return;
   const d = e.data;
   if (!d || d.climbGame !== 1 || (d.type !== 'correct' && d.type !== 'wrong')) return;
+  Sound.play(d.type);
   post('/api/progress', { code: me.code, id: me.id, type: d.type }).catch(() => {});
 });
 
 setInterval(() => {
   if (snap) renderShop(snap.players.find(p => p.id === me.id));
-  if (snap && snap.state === 'playing') $('timer').textContent = fmtTime(snap.endsAt - Date.now());
+  if (snap && snap.state === 'playing') {
+    const left = snap.endsAt - Date.now();
+    $('timer').textContent = fmtTime(left);
+    const sec = Math.ceil(left / 1000);
+    if (sec <= 10 && sec > 0 && sec !== lastTick) { lastTick = sec; Sound.play('tick'); }
+  }
   else $('timer').textContent = '';
 }, 250);
+let lastTick = 0;
 
 async function nextQuestion() {
   loading = true;
@@ -117,6 +125,7 @@ async function answer(choice) {
   btns.forEach(b => (b.disabled = true));
   try {
     const r = await post('/api/answer', { code: me.code, id: me.id, choice });
+    Sound.play(r.correct ? 'correct' : 'wrong');
     btns.forEach((b, i) => {
       if (i === r.correctIndex) b.classList.add('right');
       else if (i === choice) b.classList.add('wrong');
@@ -162,7 +171,8 @@ function toast(msg, bad) {
 
 function buy(item, target) {
   post('/api/buy', { code: me.code, id: me.id, item, target })
-    .catch(e => { if (e.message !== 'frozen') toast(e.message, true); });
+    .then(() => Sound.play(item === 'shield' ? 'shield' : item === 'boost' ? 'boost' : 'coin'))
+    .catch(e => { if (e.message !== 'frozen') { toast(e.message, true); Sound.play('wrong'); } });
 }
 
 function buildShop() {
@@ -221,9 +231,27 @@ function handleEvents() {
   for (const ev of evs) {
     if (ev.id <= lastEv) continue;
     lastEv = ev.id;
-    if (ev.toId === me.id && ev.type === 'bomb') toast(`💣 ${ev.from} bombed you!`, true);
-    else if (ev.toId === me.id && ev.type === 'freeze') toast(`❄️ ${ev.from} froze you!`, true);
-    else if (ev.type === 'blocked' && ev.toId === me.id) toast(`🛡️ Your shield blocked ${ev.from}'s attack!`);
-    else if (ev.type === 'blocked' && ev.fromId === me.id) toast(`🛡️ ${ev.to}'s shield blocked your attack!`, true);
+    if (ev.toId === me.id && ev.type === 'bomb') { toast(`💣 ${ev.from} bombed you!`, true); Sound.play('boom'); }
+    else if (ev.toId === me.id && ev.type === 'freeze') { toast(`❄️ ${ev.from} froze you!`, true); Sound.play('freeze'); }
+    else if (ev.type === 'blocked' && ev.toId === me.id) { toast(`🛡️ Your shield blocked ${ev.from}'s attack!`); Sound.play('block'); }
+    else if (ev.type === 'blocked' && ev.fromId === me.id) { toast(`🛡️ ${ev.to}'s shield blocked your attack!`, true); Sound.play('block'); }
   }
 }
+
+// ---------- sounds that follow the game state ----------
+let prevState = null, wasTop = false;
+function soundState(mine) {
+  const reached = !!(mine && mine.pos >= snap.top);
+  if (prevState !== null) {
+    if (prevState === 'lobby' && snap.state === 'playing') Sound.play('start');
+    if (prevState !== 'ended' && snap.state === 'ended') {
+      const rank = snap.players.findIndex(p => p.id === me.id);
+      Sound.play(rank === 0 ? 'win' : 'end');
+    } else if (reached && !wasTop && snap.state === 'playing') Sound.play('summit');
+  }
+  prevState = snap.state;
+  wasTop = reached;
+}
+
+$('mute').textContent = Sound.isMuted() ? '🔇' : '🔊';
+$('mute').onclick = () => { $('mute').textContent = Sound.toggle() ? '🔇' : '🔊'; };

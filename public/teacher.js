@@ -34,6 +34,7 @@ function connect() {
 
 function update() {
   if (!snap) return;
+  teacherSounds();
   $('code').textContent = $('code2').textContent = host.code;
   if (snap.state === 'lobby') {
     show('lobby');
@@ -55,8 +56,14 @@ function update() {
   }
 }
 
+let lastTick = 0;
 setInterval(() => {
-  if (snap && snap.state === 'playing') $('timer').textContent = fmtTime(snap.endsAt - Date.now());
+  if (snap && snap.state === 'playing') {
+    const left = snap.endsAt - Date.now();
+    $('timer').textContent = fmtTime(left);
+    const sec = Math.ceil(left / 1000);
+    if (sec <= 10 && sec > 0 && sec !== lastTick) { lastTick = sec; Sound.play('tick'); }
+  }
 }, 250);
 
 $('mode').onchange = () => {
@@ -90,3 +97,33 @@ try {
   const saved = JSON.parse(sessionStorage.getItem('host') || 'null');
   if (saved) { host = saved; setupJoinUrl(); connect(); }
 } catch {}
+
+// ---------- sounds on the projector ----------
+let prevState = null, lastEv, finished = new Set();
+function teacherSounds() {
+  const evs = snap.events || [];
+  if (lastEv === undefined) lastEv = evs.length ? evs[evs.length - 1].id : 0;
+  for (const ev of evs) {
+    if (ev.id <= lastEv) continue;
+    lastEv = ev.id;
+    if (ev.type === 'bomb') Sound.play('boom');
+    else if (ev.type === 'freeze') Sound.play('freeze');
+    else if (ev.type === 'blocked') Sound.play('block');
+    else if (ev.type === 'shield') Sound.play('shield');
+    else if (ev.type === 'boost') Sound.play('boost');
+  }
+  for (const p of snap.players) {
+    if (p.pos >= snap.top && !finished.has(p.id)) {
+      finished.add(p.id);
+      if (prevState === 'playing' && snap.state === 'playing') Sound.play('summit');
+    }
+  }
+  if (prevState !== null) {
+    if (prevState === 'lobby' && snap.state === 'playing') Sound.play('start');
+    if (prevState !== 'ended' && snap.state === 'ended') Sound.play('win');
+  }
+  prevState = snap.state;
+}
+
+$('mute').textContent = Sound.isMuted() ? '🔇' : '🔊';
+$('mute').onclick = () => { $('mute').textContent = Sound.toggle() ? '🔇' : '🔊'; };
