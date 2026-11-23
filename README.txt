@@ -18,3 +18,6 @@ Giao vien co the tat bom va dong bang bang o "Cho phep tan cong" luc tao phong.
 
 AM THANH: tao bang Web Audio (khong can file). Nut loa goc tren ben phai de bat/tat tieng.
 Trinh duyet chi cho phat tieng sau khi nguoi dung bam/cham 1 lan tren trang.
+
+HIEU UNG: phao giay, vu no, bang, khien, xu bay, nhan vat nhay khi leo, may/nang/cay tren nui, "GO!" luc bat dau,
+bang nhan giai. May tinh bat "giam chuyen dong" (Reduce motion) se tu dong tat hieu ung.

@@ -126,6 +126,8 @@ async function answer(choice) {
   try {
     const r = await post('/api/answer', { code: me.code, id: me.id, choice });
     Sound.play(r.correct ? 'correct' : 'wrong');
+    if (r.correct) { const c = Fx.center(btns[choice]); Fx.confetti(c.x, c.y, 22); Fx.float(c.x, c.y - 30, '+2 🪙'); }
+    else { $('quiz').classList.add('shakecard'); setTimeout(() => $('quiz').classList.remove('shakecard'), 450); }
     btns.forEach((b, i) => {
       if (i === r.correctIndex) b.classList.add('right');
       else if (i === choice) b.classList.add('wrong');
@@ -158,7 +160,7 @@ try {
 const ICON = { shield: '🛡️', boost: '⚡', bomb: '💣', freeze: '❄️' };
 const NAME = { shield: 'Shield', boost: 'Boost', bomb: 'Bomb', freeze: 'Freeze' };
 const HELP = { shield: 'blocks 1 attack', boost: 'next answer x2', bomb: 'push a friend down', freeze: 'friend waits 5s' };
-let shopBuilt = false, lastEv;
+let shopBuilt = false, lastEv, prevCoins, wasFrozen = false;
 let toastTimer;
 
 function toast(msg, bad) {
@@ -197,10 +199,19 @@ function renderShop(mine) {
   const active = snap.state === 'playing' && mine.pos < snap.top;
   $('shop').classList.toggle('hidden', !active);
   const fz = frozenLeft(mine, snap);
-  $('frozenov').classList.toggle('hidden', !(snap.state === 'playing' && fz > 0));
+  const isFrozen = snap.state === 'playing' && fz > 0;
+  $('frozenov').classList.toggle('hidden', !isFrozen);
+  if (isFrozen && !wasFrozen) buildFlakes();
+  wasFrozen = isFrozen;
   if (fz > 0) $('fzsec').textContent = Math.ceil(fz / 1000) + 's';
   if (!active) return;
   if (!shopBuilt) buildShop();
+  if (prevCoins !== undefined && mine.coins > prevCoins) {
+    const c = Fx.center($('coins'));
+    Fx.float(c.x + 26, c.y - 12, '+' + (mine.coins - prevCoins) + ' 🪙');
+    $('coins').classList.add('bump'); setTimeout(() => $('coins').classList.remove('bump'), 450);
+  }
+  prevCoins = mine.coins;
   $('coins').textContent = mine.coins;
   for (const b of $('items').children) {
     const k = b.dataset.item;
@@ -243,10 +254,11 @@ let prevState = null, wasTop = false;
 function soundState(mine) {
   const reached = !!(mine && mine.pos >= snap.top);
   if (prevState !== null) {
-    if (prevState === 'lobby' && snap.state === 'playing') Sound.play('start');
+    if (prevState === 'lobby' && snap.state === 'playing') { Sound.play('start'); Fx.go('GO!'); }
     if (prevState !== 'ended' && snap.state === 'ended') {
       const rank = snap.players.findIndex(p => p.id === me.id);
       Sound.play(rank === 0 ? 'win' : 'end');
+      if (rank === 0) Fx.rain(3500); else Fx.confetti(window.innerWidth / 2, window.innerHeight / 2, 40);
     } else if (reached && !wasTop && snap.state === 'playing') Sound.play('summit');
   }
   prevState = snap.state;
@@ -255,3 +267,17 @@ function soundState(mine) {
 
 $('mute').textContent = Sound.isMuted() ? '🔇' : '🔊';
 $('mute').onclick = () => { $('mute').textContent = Sound.toggle() ? '🔇' : '🔊'; };
+
+function buildFlakes() {
+  const box = $('flakes');
+  box.innerHTML = '';
+  for (let i = 0; i < 22; i++) {
+    const s = document.createElement('span');
+    s.textContent = '❄️';
+    s.style.left = Math.random() * 100 + '%';
+    s.style.fontSize = (14 + Math.random() * 22) + 'px';
+    s.style.animationDuration = (2.5 + Math.random() * 3) + 's';
+    s.style.animationDelay = (-Math.random() * 4) + 's';
+    box.appendChild(s);
+  }
+}

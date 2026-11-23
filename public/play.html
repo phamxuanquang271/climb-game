@@ -29,7 +29,8 @@
     </div>
 
     <div class="card" id="wait" style="text-align:center;margin-top:14px">
-      <h2>Waiting for the teacher to start...</h2>
+      <div class="wait-emoji">⛰️</div>
+      <h2>Waiting for the teacher to start<span class="dots"><i>.</i><i>.</i><i>.</i></span></h2>
       <p class="muted">Get ready!</p>
     </div>
 
@@ -56,10 +57,11 @@
   </section>
 </div>
 <div class="modal hidden" id="picker"><div class="box"><b id="pickTitle"></b><div id="pickList"></div><button class="btn gray" style="margin-top:12px;width:100%" id="pickCancel">Cancel</button></div></div>
-<div class="frozenov hidden" id="frozenov"><div class="big">❄️</div><div>You are frozen!</div><div id="fzsec"></div></div>
+<div class="frozenov hidden" id="frozenov"><div class="flakes" id="flakes"></div><div class="big">❄️</div><div>You are frozen!</div><div id="fzsec"></div></div>
 <div class="toast hidden" id="toast"></div>
 <button class="mute" id="mute" title="Sound on/off">🔊</button>
 <script src="/sound.js"></script>
+<script src="/fx.js"></script>
 <script src="/mountain.js"></script>
 <script src="/play.js"></script>
 </body>

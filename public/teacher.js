@@ -1,4 +1,5 @@
 const $ = id => document.getElementById(id);
+const knownChips = new Set();
 let host = null; // { code, hostKey }
 let snap = null;
 let es = null;
@@ -39,7 +40,11 @@ function update() {
   if (snap.state === 'lobby') {
     show('lobby');
     $('cnt').textContent = snap.players.length;
-    $('chips').innerHTML = snap.players.slice().sort((a, b) => a.i - b.i).map(p => `<span class="chip">${p.av} ${esc(p.name)}</span>`).join('') || '<span class="muted">Đang chờ học sinh vào...</span>';
+    $('chips').innerHTML = snap.players.slice().sort((a, b) => a.i - b.i).map(p => {
+      const isNew = !knownChips.has(p.id);
+      knownChips.add(p.id);
+      return `<span class="chip${isNew ? ' pop' : ''}">${p.av} ${esc(p.name)}</span>`;
+    }).join('') || '<span class="muted">Đang chờ học sinh vào...</span>';
     $('start').disabled = snap.players.length === 0;
   } else if (snap.state === 'playing') {
     show('game');
@@ -119,8 +124,8 @@ function teacherSounds() {
     }
   }
   if (prevState !== null) {
-    if (prevState === 'lobby' && snap.state === 'playing') Sound.play('start');
-    if (prevState !== 'ended' && snap.state === 'ended') Sound.play('win');
+    if (prevState === 'lobby' && snap.state === 'playing') { Sound.play('start'); Fx.go('GO!'); }
+    if (prevState !== 'ended' && snap.state === 'ended') { Sound.play('win'); Fx.rain(5000); }
   }
   prevState = snap.state;
 }
