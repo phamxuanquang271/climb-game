@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<div class="wrap narrow">
+<div class="wrap narrow" id="wrap">
   <section id="join" class="card">
     <h1>⛰️ Join the game</h1>
     <label for="code">Game code</label>
@@ -22,6 +22,12 @@
     <div class="topbar"><b id="me"></b><span class="timer" id="timer"></span></div>
     <div class="mtn small" id="mtn"></div>
 
+    <div class="shop hidden" id="shop">
+      <div class="coins">🪙 <span id="coins">0</span></div>
+      <div class="items" id="items"></div>
+      <div class="status" id="status"></div>
+    </div>
+
     <div class="card" id="wait" style="text-align:center;margin-top:14px">
       <h2>Waiting for the teacher to start...</h2>
       <p class="muted">Get ready!</p>
@@ -32,6 +38,10 @@
       <div class="qtext" id="qtext"></div>
       <div class="opts" id="opts"></div>
       <div class="feedback" id="fb"></div>
+    </div>
+
+    <div class="hidden" id="activity" style="margin-top:14px">
+      <iframe id="frame" title="Activity" sandbox="allow-scripts allow-forms allow-modals allow-popups"></iframe>
     </div>
 
     <div class="card hidden" id="top" style="margin-top:14px;text-align:center">
@@ -45,6 +55,9 @@
     </div>
   </section>
 </div>
+<div class="modal hidden" id="picker"><div class="box"><b id="pickTitle"></b><div id="pickList"></div><button class="btn gray" style="margin-top:12px;width:100%" id="pickCancel">Cancel</button></div></div>
+<div class="frozenov hidden" id="frozenov"><div class="big">❄️</div><div>You are frozen!</div><div id="fzsec"></div></div>
+<div class="toast hidden" id="toast"></div>
 <script src="/mountain.js"></script>
 <script src="/play.js"></script>
 </body>

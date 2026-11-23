@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sample activity</title>
+<script>
+// Safe fallback so this file also works when opened on its own (outside the game).
+window.climb = window.climb || { correct: function () {}, wrong: function () {} };
+</script>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 18px; background: #fff; color: #12263a; }
+  h2 { margin: 0 0 14px; }
+  .q { margin-bottom: 18px; padding: 14px; border: 2px solid #dbe6f0; border-radius: 14px; }
+  .q p { margin: 0 0 10px; font-weight: 700; }
+  button { font: inherit; padding: 10px 16px; margin: 4px 6px 4px 0; border: 0; border-radius: 10px; background: #2f80ed; color: #fff; cursor: pointer; }
+  button.ok { background: #27ae60; } button.no { background: #eb5757; }
+  button:disabled { cursor: default; opacity: .85; }
+</style>
+</head>
+<body>
+<h2>Choose the correct answer</h2>
+<div id="quiz"></div>
+<script>
+var QUESTIONS = [
+  { q: "She ___ to school every day.", options: ["go", "goes", "going"], answer: 1 },
+  { q: "The opposite of \"ancient\" is...", options: ["old", "modern", "tiny"], answer: 1 },
+  { q: "I have lived here ___ 2019.", options: ["for", "since", "during"], answer: 1 },
+  { q: "\"Enormous\" means...", options: ["very big", "very small", "very fast"], answer: 0 },
+  { q: "He is ___ than his brother.", options: ["tall", "taller", "tallest"], answer: 1 }
+];
+var box = document.getElementById('quiz');
+QUESTIONS.forEach(function (item) {
+  var div = document.createElement('div'); div.className = 'q';
+  var p = document.createElement('p'); p.textContent = item.q; div.appendChild(p);
+  var done = false;
+  item.options.forEach(function (text, i) {
+    var b = document.createElement('button'); b.textContent = text;
+    b.onclick = function () {
+      if (done) return;            // each question counts only once
+      done = true;
+      if (i === item.answer) { b.className = 'ok'; window.climb.correct(); }
+      else { b.className = 'no'; window.climb.wrong(); }
+      div.querySelectorAll('button').forEach(function (x) { x.disabled = true; });
+    };
+    div.appendChild(b);
+  });
+  box.appendChild(div);
+});
+</script>
+</body>
+</html>

@@ -28,7 +28,7 @@ async function setupJoinUrl() {
 
 function connect() {
   es = new EventSource(`/events?code=${host.code}&role=host&key=${host.hostKey}`);
-  es.onmessage = e => { snap = JSON.parse(e.data); update(); };
+  es.onmessage = e => { snap = JSON.parse(e.data); snap._at = Date.now(); update(); };
   es.onerror = () => {};
 }
 
@@ -44,13 +44,14 @@ function update() {
     show('game');
     renderMountain($('mtn'), snap, null);
     $('lb').innerHTML = leaderboardHtml(snap, null, 10);
+    $('feed').innerHTML = eventsHtml(snap, 6);
   } else {
     show('over');
     const top = snap.players.slice(0, 3);
     const cls = ['p1', 'p2', 'p3'];
     // podium order: 2nd, 1st, 3rd
     const order = [1, 0, 2].filter(i => top[i]);
-    $('podium').innerHTML = order.map(i => `<div class="${cls[i]}"><div class="av">${top[i].av}</div><b>${esc(top[i].name)}</b><div class="bar">${i + 1}</div><div class="muted">${top[i].pos}/${snap.top}</div></div>`).join('');
+    $('podium').innerHTML = order.map(i => `<div class="${cls[i]}"><div class="av">${top[i].av}</div><b>${esc(top[i].name)}</b><div class="bar">${i + 1}</div><div class="muted">${Math.round(top[i].pos / snap.top * 100)}%</div></div>`).join('');
   }
 }
 
@@ -58,10 +59,23 @@ setInterval(() => {
   if (snap && snap.state === 'playing') $('timer').textContent = fmtTime(snap.endsAt - Date.now());
 }, 250);
 
+$('mode').onchange = () => {
+  const h = $('mode').value === 'html';
+  $('quizBox').classList.toggle('hidden', h);
+  $('htmlBox').classList.toggle('hidden', !h);
+};
+
 $('create').onclick = async () => {
   $('err').textContent = '';
   try {
-    const r = await post('/api/create', { duration: +$('dur').value, questions: $('qs').value });
+    const body = { duration: +$('dur').value, attacks: $('attacks').checked };
+    if ($('mode').value === 'html') {
+      const f = $('file').files[0];
+      if (!f) throw new Error('Hãy chọn một file HTML.');
+      body.html = await f.text();
+      body.total = +$('total').value || 10;
+    } else body.questions = $('qs').value;
+    const r = await post('/api/create', body);
     host = { code: r.code, hostKey: r.hostKey };
     sessionStorage.setItem('host', JSON.stringify(host));
     await setupJoinUrl();

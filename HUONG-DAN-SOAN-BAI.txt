@@ -1,0 +1,29 @@
+HUONG DAN SOAN BAI HTML CHO GAME LEO NUI
+=========================================
+
+Y tuong: ban nho Claude soan 1 file HTML bai tap. Khi hoc sinh tra loi DUNG, bai goi
+climb.correct() -> nhan vat cua em do leo len tren man chieu. Tra loi SAI thi goi
+climb.wrong() (khong leo, chi dem so cau sai).
+
+Game tu dong tiem san doi tuong "climb" vao bai khi hoc sinh mo bai, nen bai chi can goi.
+
+----- LOI NHAC MAU DE DAN CHO CLAUDE (thay phan trong [ ]) -----
+
+Hay soan cho toi 1 file HTML duy nhat (HTML + CSS + JavaScript trong cung 1 file) la bai tap
+tieng Anh: [chu de, vi du: 15 cau chia dong tu thi hien tai don, trinh do lop 6].
+Yeu cau ky thuat:
+1. Dau phan <head> co dong nay (de bai van chay khi mo rieng):
+   <script>window.climb = window.climb || { correct: function(){}, wrong: function(){} };</script>
+2. Moi khi hoc sinh tra loi dung 1 cau, goi window.climb.correct() DUNG 1 LAN cho cau do.
+   Moi khi tra loi sai, goi window.climb.wrong() 1 lan. Moi cau chi tinh 1 lan (khoa cau
+   sau khi da tra loi, hoac chi tinh lan dau).
+3. Khong dung alert(), confirm(), prompt(); khong dung localStorage/sessionStorage/cookie;
+   khong goi mang ra ngoai (font, thu vien tu CDN...). Moi thu nam trong file.
+4. Giao dien rong toi da khoang 800px, chu to de doc tren dien thoai.
+5. Bai co dung [so cau] cau.
+
+----- KHI DUNG TRONG GAME -----
+- Trang giao vien: chon "Bai HTML cua toi", chon file, dat "So cau dung de len dinh" = so cau
+  cua bai (hoac nho hon neu muon len dinh som), bam Tao phong.
+- File mau de thu: samples/bai-mau.html (5 cau).
+- Bai tai len chi ton tai trong phong do; muon dung lai o lan sau thi tai lai file.

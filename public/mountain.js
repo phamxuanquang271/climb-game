@@ -36,7 +36,7 @@ function renderMountain(el, snap, meId) {
     if (!node) {
       node = document.createElement('div');
       node.className = 'pl';
-      node.innerHTML = '<div class="av"></div><div class="nm"></div>';
+      node.innerHTML = '<div class="av"></div><div class="fx"></div><div class="nm"></div>';
       layer.appendChild(node);
       el._nodes.set(p.id, node);
     }
@@ -49,12 +49,48 @@ function renderMountain(el, snap, meId) {
     node.querySelector('.av').textContent = p.pos >= snap.top ? '🏆' : p.av;
     node.querySelector('.nm').textContent = p.name;
     node.classList.toggle('me', p.id === meId);
+    const frozen = frozenLeft(p, snap) > 0;
+    node.classList.toggle('frozen', frozen);
+    node.querySelector('.fx').textContent = (p.sh ? '🛡️' : '') + (p.bo ? '⚡' : '') + (frozen ? '❄️' : '');
+  }
+  // flash an effect on players that were just attacked
+  const evs = snap.events || [];
+  if (el._lastEv === undefined) el._lastEv = evs.length ? evs[evs.length - 1].id : 0;
+  for (const ev of evs) {
+    if (ev.id <= el._lastEv) continue;
+    el._lastEv = ev.id;
+    if (ev.type === 'bomb' || ev.type === 'freeze' || ev.type === 'blocked') {
+      const n = el._nodes.get(ev.toId);
+      if (n) { n.dataset.hit = ev.type; n.classList.add('hit'); setTimeout(() => n.classList.remove('hit'), 1000); }
+    }
   }
   for (const [id, node] of el._nodes) if (!seen.has(id)) { node.remove(); el._nodes.delete(id); }
 }
 
 function leaderboardHtml(snap, meId, limit) {
   return snap.players.slice(0, limit || 99).map((p, i) =>
-    `<li><span class="rk">${i + 1}</span><span>${p.av}</span><span class="nm">${esc(p.name)}${p.id === meId ? ' (you)' : ''}</span><span class="sc">${p.pos}/${snap.top}</span></li>`
+    `<li><span class="rk">${i + 1}</span><span>${p.av}</span><span class="nm">${esc(p.name)}${p.id === meId ? ' (you)' : ''}</span><span class="sc">${Math.round(p.pos / snap.top * 100)}%</span></li>`
   ).join('');
+}
+
+// Milliseconds a player is still frozen, based on when the snapshot arrived.
+function frozenLeft(p, snap) {
+  return Math.max(0, (p.fz || 0) - (Date.now() - (snap._at || Date.now())));
+}
+
+function eventText(ev) {
+  const e = esc;
+  switch (ev.type) {
+    case 'bomb': return `💣 ${e(ev.from)} → ${e(ev.to)}`;
+    case 'freeze': return `❄️ ${e(ev.from)} → ${e(ev.to)}`;
+    case 'shield': return `🛡️ ${e(ev.from)} got a shield`;
+    case 'boost': return `⚡ ${e(ev.from)} is boosted`;
+    case 'blocked': return `🛡️ ${e(ev.to)} blocked ${e(ev.from)}'s ${ev.kind === 'bomb' ? '💣' : '❄️'}`;
+    default: return '';
+  }
+}
+
+function eventsHtml(snap, limit) {
+  const list = (snap.events || []).slice(-(limit || 6)).reverse();
+  return list.map(ev => `<li>${eventText(ev)}</li>`).join('') || '<li class="muted">Nothing yet</li>';
 }

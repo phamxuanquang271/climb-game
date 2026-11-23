@@ -20,9 +20,25 @@
       <option value="10">10 phút</option>
       <option value="15">15 phút</option>
     </select>
+    <label style="display:flex;gap:10px;align-items:center;font-weight:600;margin-top:14px"><input type="checkbox" id="attacks" checked style="width:auto"> Cho phép tấn công (bom, đóng băng)</label>
+    <p class="muted" style="margin:4px 0 0">Học sinh kiếm xu khi trả lời đúng và mua khiên, tăng tốc, bom, đóng băng. Tắt ô này nếu chỉ muốn khiên và tăng tốc.</p>
+    <label for="mode">Loại bài</label>
+    <select id="mode">
+      <option value="quiz" selected>Câu hỏi trắc nghiệm (nhập tại đây)</option>
+      <option value="html">Bài HTML của tôi (tải file lên)</option>
+    </select>
+    <div id="quizBox">
     <label for="qs">Câu hỏi của bạn (để trống để dùng 18 câu mẫu)</label>
     <textarea id="qs" placeholder="Mỗi dòng một câu, ngăn cách bằng dấu |, cuối cùng là đáp án đúng (A-D):&#10;She ___ to school every day. | go | goes | going | gone | B&#10;Opposite of &quot;hot&quot;? | cold | warm | big | fast | A"></textarea>
     <p class="muted">Cần ít nhất 3 câu. Học sinh sẽ nhận câu hỏi theo thứ tự ngẫu nhiên, mỗi bạn tự đi với tốc độ của mình.</p>
+    </div>
+    <div id="htmlBox" class="hidden">
+      <label for="file">File HTML</label>
+      <input id="file" type="file" accept=".html,.htm,text/html">
+      <label for="total">Số câu đúng để lên đỉnh núi</label>
+      <input id="total" type="number" min="1" max="200" value="10">
+      <p class="muted">Học sinh làm bài HTML này trên máy của mình. Mỗi lần bài gọi <code>climb.correct()</code>, nhân vật của em đó leo lên một nấc. Chưa biết soạn bài thế nào? Xem file HUONG-DAN-SOAN-BAI.txt.</p>
+    </div>
     <button class="btn big green" id="create">Tạo phòng</button>
     <div class="err" id="err"></div>
   </section>
@@ -50,7 +66,10 @@
     </div>
     <div class="grid2">
       <div class="mtn big" id="mtn"></div>
-      <div class="card"><h2>Bảng xếp hạng</h2><ol class="lb" id="lb"></ol></div>
+      <div>
+        <div class="card"><h2>Bảng xếp hạng</h2><ol class="lb" id="lb"></ol></div>
+        <div class="card"><h2>Hoạt động</h2><ul class="feed" id="feed"></ul></div>
+      </div>
     </div>
   </section>
 

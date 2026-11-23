@@ -68,7 +68,7 @@ async function saveResults(r) {
     for (const p of r.players.values()) {
       await pool.query(
         'insert into results (room_code, player_name, correct, wrong, pos, finished, finish_seconds) values ($1,$2,$3,$4,$5,$6,$7)',
-        [r.code, p.name, p.correct, p.wrong, p.pos, !!p.finishedAt, p.finishedAt && r.startedAt ? Math.round((p.finishedAt - r.startedAt) / 1000) : null]
+        [r.code, p.name, p.correct, p.wrong, Math.round(p.pos), !!p.finishedAt, p.finishedAt && r.startedAt ? Math.round((p.finishedAt - r.startedAt) / 1000) : null]
       );
     }
   } catch (e) { console.error('Saving results failed:', e.message); }
@@ -125,13 +125,43 @@ function rank(a, b) {
   return b.correct - a.correct;
 }
 
+// ---- Coins, items and attacks ----
+const COIN_PER_CORRECT = 2;
+const ITEMS = { shield: { cost: 3 }, boost: { cost: 4 }, bomb: { cost: 5, attack: true }, freeze: { cost: 5, attack: true } };
+const FREEZE_MS = 5000;     // how long a frozen player cannot answer
+const PROTECT_MS = 6000;    // a player who was just hit cannot be hit again for a short while
+
+function unitsTotal(r) { return r.mode === 'activity' ? r.total : TOP; }
+
+function syncPos(r, p, now) {
+  const tot = unitsTotal(r);
+  p.pos = Math.min(TOP, Math.round(p.units / tot * TOP * 100) / 100);
+  if (p.units >= tot) { p.pos = TOP; if (!p.finishedAt) p.finishedAt = now; }
+}
+
+function applyCorrect(r, p, now) {
+  const gain = p.boost ? 2 : 1;
+  p.boost = false;
+  p.correct++;
+  p.coins += COIN_PER_CORRECT;
+  p.units = Math.min(unitsTotal(r), p.units + gain);
+  syncPos(r, p, now);
+}
+
+function addEvent(r, ev) {
+  r.events.push({ id: ++r.evSeq, ...ev });
+  if (r.events.length > 8) r.events.shift();
+}
+
 function snapshot(r) {
+  const now = Date.now();
   const players = [...r.players.values()].map(p => ({
     id: p.id, name: p.name, av: p.av, i: p.i, pos: p.pos,
     fin: p.finishedAt, correct: p.correct, wrong: p.wrong,
+    coins: p.coins, sh: p.shield, bo: p.boost, fz: Math.max(0, p.frozenUntil - now),
   }));
   players.sort(rank);
-  return { state: r.state, endsAt: r.endsAt, top: TOP, total: r.questions.length, players };
+  return { state: r.state, endsAt: r.endsAt, top: TOP, total: r.mode === 'activity' ? r.total : r.questions.length, mode: r.mode, attacks: r.attacks, shop: ITEMS, events: r.events, players };
 }
 
 function broadcast(r) {
@@ -164,7 +194,7 @@ setInterval(() => {
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let s = '';
-    req.on('data', d => { s += d; if (s.length > 200000) { reject(new Error('too big')); req.destroy(); } });
+    req.on('data', d => { s += d; if (s.length > 2600000) { reject(new Error('too big')); req.destroy(); } });
     req.on('end', () => { try { resolve(s ? JSON.parse(s) : {}); } catch (e) { reject(e); } });
     req.on('error', reject);
   });
@@ -184,6 +214,13 @@ function currentQuestion(r, p) {
   return p.cur;
 }
 
+// Script injected into uploaded HTML activities: gives them window.climb.correct() / window.climb.wrong()
+const HOOK = '<script>(function(){function s(t){try{parent.postMessage({climbGame:1,type:t},"*")}catch(e){}}window.climb={correct:function(){s("correct")},wrong:function(){s("wrong")}};})();</script>';
+function injectHook(html) {
+  const head = html.match(/<head[^>]*>/i) || html.match(/<html[^>]*>/i);
+  return head ? html.replace(head[0], () => head[0] + HOOK) : HOOK + html;
+}
+
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
 
 async function handleApi(req, res, url) {
@@ -196,6 +233,14 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === 'GET' && p === '/api/leaderboard') return json(res, 200, await leaderboard());
+
+  if (req.method === 'GET' && p === '/api/activity') {
+    const r = rooms.get(url.searchParams.get('code'));
+    const pl = r && r.players.get(url.searchParams.get('id'));
+    if (!pl || r.mode !== 'activity' || r.state === 'lobby') { res.writeHead(404); return res.end('Not available'); }
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+    return res.end(injectHook(r.html));
+  }
 
   if (req.method === 'GET' && p === '/api/question') {
     const r = rooms.get(url.searchParams.get('code'));
@@ -213,15 +258,18 @@ async function handleApi(req, res, url) {
   try { body = await readBody(req); } catch { return json(res, 400, { error: 'bad request' }); }
 
   if (p === '/api/create') {
-    let questions = parseQuestions(body.questions);
-    if (body.questions && String(body.questions).trim() && questions.length < 3)
+    const html = typeof body.html === 'string' ? body.html : '';
+    if (html.length > 2500000) return json(res, 400, { error: 'File HTML quá lớn (tối đa khoảng 2 MB).' });
+    let questions = html ? [] : parseQuestions(body.questions);
+    if (!html && body.questions && String(body.questions).trim() && questions.length < 3)
       return json(res, 400, { error: 'Cần ít nhất 3 câu hỏi hợp lệ (mỗi dòng: câu hỏi | A | B | C | D | đáp án đúng).' });
-    if (!questions.length) questions = SAMPLE;
+    if (!html && !questions.length) questions = SAMPLE;
     const code = newCode();
     const hostKey = crypto.randomBytes(8).toString('hex');
     const duration = Math.min(30, Math.max(1, +body.duration || 5));
-    rooms.set(code, { code, hostKey, questions, duration, state: 'lobby', endsAt: null, players: new Map(), clients: new Set(), created: Date.now(), seq: 0 });
-    return json(res, 200, { code, hostKey, questions: questions.length });
+    const total = Math.min(200, Math.max(1, Math.round(+body.total) || 10));
+    rooms.set(code, { code, hostKey, questions, duration, mode: html ? 'activity' : 'quiz', html, total, attacks: body.attacks !== false, events: [], evSeq: 0, state: 'lobby', endsAt: null, players: new Map(), clients: new Set(), created: Date.now(), seq: 0 });
+    return json(res, 200, { code, hostKey, questions: questions.length, mode: html ? 'activity' : 'quiz' });
   }
 
   const r = rooms.get(String(body.code || ''));
@@ -236,7 +284,7 @@ async function handleApi(req, res, url) {
     const i = r.seq++;
     r.players.set(id, {
       id, name, i, av: AVATARS[i % AVATARS.length], pos: 0, correct: 0, wrong: 0, finishedAt: null,
-      asked: 0, cur: null, order: shuffle(r.questions.map((_, k) => k)),
+      units: 0, coins: 0, shield: false, boost: false, frozenUntil: 0, protectedUntil: 0, asked: 0, cur: null, order: shuffle(r.questions.map((_, k) => k)),
     });
     broadcast(r);
     return json(res, 200, { id });
@@ -258,9 +306,71 @@ async function handleApi(req, res, url) {
     return json(res, 200, { ok: true });
   }
 
+  if (p === '/api/buy') {
+    const pl = r.players.get(body.id);
+    const item = ITEMS[body.item];
+    const now = Date.now();
+    const fail = msg => json(res, 400, { error: msg });
+    if (!pl || !item || r.state !== 'playing') return fail('Not available now.');
+    if (pl.units >= unitsTotal(r)) return fail('You are already at the summit!');
+    if (pl.frozenUntil > now) return json(res, 429, { error: 'frozen' });
+    if (item.attack && !r.attacks) return fail('Attacks are turned off.');
+    if (pl.coins < item.cost) return fail('Not enough coins.');
+    if (body.item === 'shield' && pl.shield) return fail('You already have a shield.');
+    if (body.item === 'boost' && pl.boost) return fail('Boost is already ready.');
+    let result = 'ok';
+    if (item.attack) {
+      const t = r.players.get(body.target);
+      if (!t || t === pl) return fail('Pick another player.');
+      if (t.units >= unitsTotal(r)) return fail(t.name + ' is already at the summit.');
+      if (t.shield) {
+        pl.coins -= item.cost;
+        t.shield = false;
+        result = 'blocked';
+        addEvent(r, { type: 'blocked', kind: body.item, from: pl.name, fromId: pl.id, to: t.name, toId: t.id });
+      } else {
+        if (t.protectedUntil > now) return fail(t.name + ' was just hit. Pick someone else.');
+        if (body.item === 'freeze' && t.frozenUntil > now) return fail(t.name + ' is already frozen.');
+        pl.coins -= item.cost;
+        if (body.item === 'bomb') {
+          const loss = Math.max(1, Math.ceil(unitsTotal(r) * 0.15));
+          t.units = Math.max(0, t.units - loss);
+          syncPos(r, t, now);
+        } else {
+          t.frozenUntil = now + FREEZE_MS;
+          setTimeout(() => broadcast(r), FREEZE_MS + 50);
+        }
+        t.protectedUntil = now + PROTECT_MS;
+        addEvent(r, { type: body.item, from: pl.name, fromId: pl.id, to: t.name, toId: t.id });
+      }
+    } else {
+      pl.coins -= item.cost;
+      pl[body.item] = true;
+      addEvent(r, { type: body.item, from: pl.name, fromId: pl.id, to: pl.name, toId: pl.id });
+    }
+    broadcast(r);
+    return json(res, 200, { ok: true, coins: pl.coins, result });
+  }
+
+  if (p === '/api/progress') {
+    const pl = r.players.get(body.id);
+    if (!pl || r.mode !== 'activity' || r.state !== 'playing' || pl.pos >= TOP) return json(res, 400, { error: 'not playing' });
+    if (body.type !== 'correct' && body.type !== 'wrong') return json(res, 400, { error: 'bad type' });
+    const now = Date.now();
+    if (pl.frozenUntil > now) return json(res, 429, { error: 'frozen' });
+    if (pl.lastProg && now - pl.lastProg < 200) return json(res, 200, { ok: true, ignored: true });
+    pl.lastProg = now;
+    if (body.type === 'correct') applyCorrect(r, pl, now);
+    else pl.wrong++;
+    broadcast(r);
+    if ([...r.players.values()].every(x => x.pos >= TOP)) endGame(r);
+    return json(res, 200, { ok: true, pos: pl.pos });
+  }
+
   if (p === '/api/answer') {
     const pl = r.players.get(body.id);
     if (!pl || r.state !== 'playing' || !pl.cur || pl.pos >= TOP) return json(res, 400, { error: 'not playing' });
+    if (pl.frozenUntil > Date.now()) return json(res, 429, { error: 'frozen' });
     const q = r.questions[pl.cur.qi];
     const choice = +body.choice;
     if (!(choice >= 0 && choice < pl.cur.perm.length)) return json(res, 400, { error: 'bad choice' });
@@ -268,11 +378,8 @@ async function handleApi(req, res, url) {
     const correctIndex = pl.cur.perm.indexOf(q[2]);
     pl.cur = null;
     pl.asked++;
-    if (correct) {
-      pl.correct++;
-      pl.pos = Math.min(TOP, pl.pos + 1);
-      if (pl.pos >= TOP) pl.finishedAt = Date.now();
-    } else pl.wrong++;
+    if (correct) applyCorrect(r, pl, Date.now());
+    else pl.wrong++;
     broadcast(r);
     if ([...r.players.values()].every(x => x.pos >= TOP)) endGame(r);
     return json(res, 200, { correct, correctIndex, pos: pl.pos, finished: pl.pos >= TOP });
