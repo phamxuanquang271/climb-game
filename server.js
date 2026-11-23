@@ -35,6 +35,57 @@ const SAMPLE = [
 
 const rooms = new Map();
 
+// ---- Optional Postgres (leaderboard). Active only when DATABASE_URL is set. ----
+let pool = null;
+if (process.env.DATABASE_URL) {
+  try {
+    const { Pool } = require('pg');
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.PGSSL === 'off' ? false : { rejectUnauthorized: false },
+      max: 3,
+    });
+    pool.on('error', e => console.error('DB pool error:', e.message));
+    pool.query(`create table if not exists results (
+      id serial primary key,
+      room_code text not null,
+      player_name text not null,
+      correct int not null,
+      wrong int not null,
+      pos int not null,
+      finished boolean not null,
+      finish_seconds int,
+      played_at timestamptz not null default now()
+    )`).then(() => console.log('Database ready.')).catch(e => { console.error('DB init failed:', e.message); pool = null; });
+  } catch (e) {
+    console.error('DATABASE_URL is set but the "pg" package is missing. Run: npm install');
+  }
+}
+
+async function saveResults(r) {
+  if (!pool) return;
+  try {
+    for (const p of r.players.values()) {
+      await pool.query(
+        'insert into results (room_code, player_name, correct, wrong, pos, finished, finish_seconds) values ($1,$2,$3,$4,$5,$6,$7)',
+        [r.code, p.name, p.correct, p.wrong, p.pos, !!p.finishedAt, p.finishedAt && r.startedAt ? Math.round((p.finishedAt - r.startedAt) / 1000) : null]
+      );
+    }
+  } catch (e) { console.error('Saving results failed:', e.message); }
+}
+
+async function leaderboard() {
+  if (!pool) return { enabled: false, rows: [] };
+  try {
+    const q = await pool.query(`
+      select min(player_name) as name, sum(correct)::int as correct, count(*)::int as games,
+             count(*) filter (where finished)::int as summits
+      from results group by lower(player_name)
+      order by correct desc, games asc limit 20`);
+    return { enabled: true, rows: q.rows };
+  } catch (e) { return { enabled: false, rows: [], error: e.message }; }
+}
+
 function parseQuestions(text) {
   // One question per line:  question | option A | option B | option C | option D | correct letter (A-D)
   const out = [];
@@ -93,6 +144,7 @@ function endGame(r) {
   r.state = 'ended';
   r.endsAt = Date.now();
   broadcast(r);
+  saveResults(r);
 }
 
 setInterval(() => {
@@ -143,6 +195,8 @@ async function handleApi(req, res, url) {
     return json(res, 200, { ips, port: PORT });
   }
 
+  if (req.method === 'GET' && p === '/api/leaderboard') return json(res, 200, await leaderboard());
+
   if (req.method === 'GET' && p === '/api/question') {
     const r = rooms.get(url.searchParams.get('code'));
     const pl = r && r.players.get(url.searchParams.get('id'));
@@ -192,7 +246,8 @@ async function handleApi(req, res, url) {
     if (body.hostKey !== r.hostKey) return json(res, 403, { error: 'forbidden' });
     if (r.state !== 'lobby') return json(res, 400, { error: 'already started' });
     r.state = 'playing';
-    r.endsAt = Date.now() + r.duration * 60000;
+    r.startedAt = Date.now();
+    r.endsAt = r.startedAt + r.duration * 60000;
     broadcast(r);
     return json(res, 200, { ok: true });
   }
@@ -244,7 +299,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (url.pathname.startsWith('/api/')) return await handleApi(req, res, url);
 
-    let rel = url.pathname === '/' ? '/index.html' : url.pathname === '/teacher' ? '/teacher.html' : url.pathname === '/play' ? '/play.html' : url.pathname;
+    let rel = url.pathname === '/' ? '/index.html' : url.pathname === '/teacher' ? '/teacher.html' : url.pathname === '/play' ? '/play.html' : url.pathname === '/leaderboard' ? '/leaderboard.html' : url.pathname;
     const file = path.normalize(path.join(PUB, rel));
     if (!file.startsWith(PUB + path.sep)) { res.writeHead(403); return res.end(); }
     fs.readFile(file, (err, data) => {

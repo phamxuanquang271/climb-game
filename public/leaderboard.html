@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leaderboard - Climb the Mountain</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="wrap narrow">
+  <h1>🏆 All-time leaderboard</h1>
+  <p class="sub">Total correct answers across all games.</p>
+  <div class="card">
+    <ol class="lb" id="lb"><li>Loading...</li></ol>
+    <p class="muted" id="note"></p>
+  </div>
+  <a href="/">← Back</a>
+</div>
+<script src="/mountain.js"></script>
+<script>
+fetch('/api/leaderboard').then(r => r.json()).then(d => {
+  if (!d.enabled) {
+    document.getElementById('lb').innerHTML = '';
+    document.getElementById('note').textContent = 'The database is not connected yet.' + (d.error ? ' (' + d.error + ')' : '');
+    return;
+  }
+  document.getElementById('lb').innerHTML = d.rows.map((r, i) =>
+    `<li><span class="rk">${i + 1}</span><span class="nm">${esc(r.name)}</span><span class="muted">${r.games} games · ${r.summits} 🏔️</span><span class="sc">${r.correct}</span></li>`
+  ).join('') || '<li>No games played yet.</li>';
+});
+</script>
+</body>
+</html>

@@ -4,3 +4,7 @@ CLIMB THE MOUNTAIN - demo
 3. Giao vien mo http://localhost:3000/teacher
 4. Hoc sinh (cung Wi-Fi) mo dia chi IP hien trong terminal, nhap ma phong.
 Khong can cai them thu vien nao.
+
+LEADERBOARD (Render Postgres): tao Postgres tren Render, dan "Internal Database URL"
+vao Environment cua web service voi ten DATABASE_URL. Bang se tu dong duoc tao.
+Xem bang xep hang tai /leaderboard.
