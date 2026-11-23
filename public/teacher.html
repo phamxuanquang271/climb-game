@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Giáo viên - Climb the Mountain</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="wrap">
+  <h1>⛰️ Climb the Mountain — Giáo viên</h1>
+
+  <!-- 1. Tạo phòng -->
+  <section id="setup" class="card" style="max-width:720px">
+    <h2>Tạo trò chơi mới</h2>
+    <label for="dur">Thời gian chơi</label>
+    <select id="dur">
+      <option value="3">3 phút</option>
+      <option value="5" selected>5 phút</option>
+      <option value="10">10 phút</option>
+      <option value="15">15 phút</option>
+    </select>
+    <label for="qs">Câu hỏi của bạn (để trống để dùng 18 câu mẫu)</label>
+    <textarea id="qs" placeholder="Mỗi dòng một câu, ngăn cách bằng dấu |, cuối cùng là đáp án đúng (A-D):&#10;She ___ to school every day. | go | goes | going | gone | B&#10;Opposite of &quot;hot&quot;? | cold | warm | big | fast | A"></textarea>
+    <p class="muted">Cần ít nhất 3 câu. Học sinh sẽ nhận câu hỏi theo thứ tự ngẫu nhiên, mỗi bạn tự đi với tốc độ của mình.</p>
+    <button class="btn big green" id="create">Tạo phòng</button>
+    <div class="err" id="err"></div>
+  </section>
+
+  <!-- 2. Phòng chờ -->
+  <section id="lobby" class="hidden">
+    <div class="card" style="text-align:center">
+      <div class="muted">Học sinh mở <b id="joinUrl"></b> và nhập mã:</div>
+      <div class="code" id="code"></div>
+      <div class="muted" id="hint"></div>
+    </div>
+    <div class="card">
+      <div class="topbar"><h2 style="margin:0">Người chơi: <span id="cnt">0</span></h2>
+        <button class="btn big green" id="start">Bắt đầu!</button></div>
+      <div class="chips" id="chips"></div>
+    </div>
+  </section>
+
+  <!-- 3. Đang chơi / kết thúc -->
+  <section id="game" class="hidden">
+    <div class="topbar">
+      <div class="timer" id="timer">0:00</div>
+      <div class="muted">Mã phòng: <b id="code2"></b></div>
+      <button class="btn red" id="end">Kết thúc sớm</button>
+    </div>
+    <div class="grid2">
+      <div class="mtn big" id="mtn"></div>
+      <div class="card"><h2>Bảng xếp hạng</h2><ol class="lb" id="lb"></ol></div>
+    </div>
+  </section>
+
+  <section id="over" class="hidden card" style="text-align:center">
+    <h2>🏁 Kết thúc!</h2>
+    <div class="podium" id="podium"></div>
+    <button class="btn big" onclick="sessionStorage.removeItem('host');location.reload()">Chơi ván mới</button>
+  </section>
+</div>
+<script src="/mountain.js"></script>
+<script src="/teacher.js"></script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Climb the Mountain</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="wrap narrow">
+  <h1>⛰️ Climb the Mountain</h1>
+  <p class="sub">Answer English questions. Every correct answer takes you higher!</p>
+  <div class="card">
+    <h2>I'm a student</h2>
+    <form id="f">
+      <label for="code">Game code</label>
+      <input id="code" inputmode="numeric" maxlength="4" placeholder="1234" autocomplete="off">
+      <div style="margin-top:14px"><button class="btn big" type="submit">Join</button></div>
+    </form>
+  </div>
+  <div class="card">
+    <h2>I'm a teacher</h2>
+    <a class="btn green" style="display:inline-block;text-decoration:none" href="/teacher">Create a game</a>
+  </div>
+</div>
+<script>
+document.getElementById('f').addEventListener('submit', e => {
+  e.preventDefault();
+  const c = document.getElementById('code').value.trim();
+  if (c) location.href = '/play?code=' + encodeURIComponent(c);
+});
+</script>
+</body>
+</html>

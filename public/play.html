@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Climb the Mountain</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="wrap narrow">
+  <section id="join" class="card">
+    <h1>⛰️ Join the game</h1>
+    <label for="code">Game code</label>
+    <input id="code" inputmode="numeric" maxlength="4" autocomplete="off">
+    <label for="name">Your name</label>
+    <input id="name" maxlength="14" autocomplete="off">
+    <div style="margin-top:14px"><button class="btn big" id="go">Let's climb!</button></div>
+    <div class="err" id="err"></div>
+  </section>
+
+  <section id="main" class="hidden">
+    <div class="topbar"><b id="me"></b><span class="timer" id="timer"></span></div>
+    <div class="mtn small" id="mtn"></div>
+
+    <div class="card" id="wait" style="text-align:center;margin-top:14px">
+      <h2>Waiting for the teacher to start...</h2>
+      <p class="muted">Get ready!</p>
+    </div>
+
+    <div class="card hidden" id="quiz" style="margin-top:14px">
+      <div class="muted" id="qn"></div>
+      <div class="qtext" id="qtext"></div>
+      <div class="opts" id="opts"></div>
+      <div class="feedback" id="fb"></div>
+    </div>
+
+    <div class="card hidden" id="top" style="margin-top:14px;text-align:center">
+      <h2>🏆 You reached the summit!</h2>
+      <p class="muted">Wait for the others to finish.</p>
+    </div>
+
+    <div class="card hidden" id="over" style="margin-top:14px">
+      <h2 id="result" style="text-align:center"></h2>
+      <ol class="lb" id="lb"></ol>
+    </div>
+  </section>
+</div>
+<script src="/mountain.js"></script>
+<script src="/play.js"></script>
+</body>
+</html>
