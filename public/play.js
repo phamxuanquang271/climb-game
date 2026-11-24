@@ -2,7 +2,8 @@ const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 let me = null; // { code, id, name }
 let snap = null;
-let loading = false; // a question is being fetched / answered
+let loading = false;
+let streak = 0, bestRank = null; // a question is being fetched / answered
 
 $('code').value = params.get('code') || '';
 
@@ -43,6 +44,13 @@ function start() {
   };
 }
 
+function showStreak() {
+  let s = $('streak');
+  if (!s) { s = document.createElement('span'); s.id = 'streak'; s.className = 'streak'; $('me').after(s); }
+  s.textContent = streak >= 2 ? '🔥 x' + streak : '';
+  s.classList.remove('bump'); void s.offsetWidth; if (streak >= 2) s.classList.add('bump');
+}
+
 function panel(name) {
   for (const id of ['wait', 'quiz', 'activity', 'top', 'over']) $(id).classList.toggle('hidden', id !== name);
 }
@@ -51,6 +59,14 @@ function update() {
   renderMountain($('mtn'), snap, me.id);
   const mine = snap.players.find(p => p.id === me.id);
   handleEvents();
+  if (mine && snap.state === 'playing') {
+    const rank = snap.players.findIndex(q => q.id === me.id);
+    if (bestRank !== null && rank < bestRank && snap.players.length > 1) {
+      Sound.play('pass');
+      const c = Fx.center($('mtn')); Fx.float(c.x, c.y, '⬆️ #' + (rank + 1), '#2f80ed');
+    }
+    bestRank = rank;
+  } else if (snap.state !== 'playing') { bestRank = null; streak = 0; showStreak(); }
   renderShop(mine);
   soundState(mine);
   if (snap.state === 'lobby') {
@@ -126,8 +142,15 @@ async function answer(choice) {
   try {
     const r = await post('/api/answer', { code: me.code, id: me.id, choice });
     Sound.play(r.correct ? 'correct' : 'wrong');
-    if (r.correct) { const c = Fx.center(btns[choice]); Fx.confetti(c.x, c.y, 22); Fx.float(c.x, c.y - 30, '+2 🪙'); }
-    else { $('quiz').classList.add('shakecard'); setTimeout(() => $('quiz').classList.remove('shakecard'), 450); }
+    if (r.correct) {
+      streak++;
+      const c = Fx.center(btns[choice]); Fx.confetti(c.x, c.y, 22); Fx.float(c.x, c.y - 30, '+2 🪙');
+      if (streak >= 3 && streak % 2 === 1) { Fx.banner('🔥 ' + streak + ' in a row!', streak >= 5 ? 'hot' : ''); Sound.play('combo'); }
+    } else {
+      streak = 0;
+      $('quiz').classList.add('shakecard'); setTimeout(() => $('quiz').classList.remove('shakecard'), 450);
+    }
+    showStreak();
     btns.forEach((b, i) => {
       if (i === r.correctIndex) b.classList.add('right');
       else if (i === choice) b.classList.add('wrong');

@@ -23,6 +23,7 @@ function renderMountain(el, snap, meId) {
       '<polygon class="flag" points="50,0.8 56,2.4 50,4" fill="#e74c5b"/></svg>' +
       '<div class="sky"><span class="sun">☀️</span><span class="cloud c1">☁️</span><span class="cloud c2">☁️</span><span class="cloud c3">☁️</span><span class="bird">🕊️</span><span class="peak-spark">✨</span></div>' +
       '<div class="trees"><span>🌲</span><span>🌳</span><span>🌲</span><span>🌲</span><span>🌳</span><span>🌲</span><span>🌳</span><span>🌲</span></div>' +
+      '<div class="marks"><span style="bottom:' + (5 + 0.25 * 78) + '%">⛺ 25%</span><span style="bottom:' + (5 + 0.5 * 78) + '%">⛺ 50%</span><span style="bottom:' + (5 + 0.75 * 78) + '%">⛺ 75%</span></div>' +
       '<div class="layer"></div>';
     el._init = true;
     el._nodes = new Map();
@@ -56,8 +57,20 @@ function renderMountain(el, snap, meId) {
     node.classList.toggle('frozen', frozen);
     node.classList.toggle('shielded', !!p.sh);
     node.classList.toggle('boosted', !!p.bo);
-    if (node._pos !== undefined && p.pos > node._pos + 0.001) climbFx(node, p, snap);
+    if (node._pos !== undefined && p.pos > node._pos + 0.001) {
+      climbFx(node, p, snap);
+      if (p.id === meId) {
+        const a = Math.floor(node._pos / snap.top * 4), b = Math.floor(p.pos / snap.top * 4);
+        if (b > a && b >= 1 && b <= 3) setTimeout(() => {
+          const c = Fx.center(node.querySelector('.av'));
+          Fx.float(c.x, c.y - 36, '⛺ ' + b * 25 + '%!', '#1e9150'); Fx.confetti(c.x, c.y, 18); Sound.play('milestone');
+        }, 900);
+      }
+    }
     node._pos = p.pos;
+    if (p.bo && !el._trail) el._trail = setInterval(() => {
+      for (const [, nd] of el._nodes) if (nd.classList.contains('boosted')) { const c = Fx.center(nd.querySelector('.av')); Fx.trail(c.x, c.y + 8); }
+    }, 120);
     node.querySelector('.fx').textContent = (p.sh ? '🛡️' : '') + (p.bo ? '⚡' : '') + (frozen ? '❄️' : '');
   }
   // flash an effect on players that were just attacked

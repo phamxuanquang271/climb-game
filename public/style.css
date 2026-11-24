@@ -180,3 +180,14 @@ code { background: #eef3f8; padding: 1px 5px; border-radius: 5px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+.marks { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.marks span { position: absolute; left: 4px; font-size: 10px; font-weight: 800; color: #fff; background: rgba(18,38,58,.45); padding: 1px 6px; border-radius: 8px; }
+.marks span::after { content: ""; position: absolute; left: 100%; top: 50%; width: 38vw; max-width: 240px; border-top: 1px dashed rgba(255,255,255,.45); }
+.gobanner.combo { font-size: clamp(34px, 9vw, 64px); color: #ff7a00; text-shadow: 0 3px 0 #fff, 0 0 18px rgba(255,160,0,.7); }
+.gobanner.combo.hot { color: #e63946; }
+.opt:active:not(:disabled) { transform: translateY(2px) scale(.98); }
+.opt.right { animation: rightpop .5s ease-out; }
+@keyframes rightpop { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
+.streak { display: inline-block; margin-left: 8px; font-weight: 800; color: #e65100; }
+.streak.bump { animation: bump .45s; }

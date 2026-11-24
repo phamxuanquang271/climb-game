@@ -117,6 +117,19 @@ const Fx = (() => {
     float(x, y, text, color) {
       add({ kind: 'text', text, x, y, vx: 0, vy: -1.2, size: 24, pop: true, color: color || '#e08600', life: 55 });
     },
+    trail(x, y) {
+      for (let i = 0; i < 4; i++) {
+        add({ kind: 'circle', x: x + rnd(-8, 8), y: y + rnd(0, 10), vx: rnd(-.4, .4), vy: rnd(.6, 1.8), drag: .96, size: rnd(3, 6), color: ['#ffd23f', '#ff9f1c', '#fff3b0'][(Math.random() * 3) | 0], life: rnd(22, 36) });
+      }
+    },
+    banner(text, cls) {
+      if (reduce) return;
+      const d = document.createElement('div');
+      d.className = 'gobanner combo ' + (cls || '');
+      d.textContent = text;
+      document.body.appendChild(d);
+      setTimeout(() => d.remove(), 1300);
+    },
     rain(ms) { if (reduce || !setup()) return; rainUntil = Date.now() + (ms || 2500); if (!raf) raf = requestAnimationFrame(tick); },
     go(text) {
       if (reduce) return;

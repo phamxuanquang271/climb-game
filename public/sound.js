@@ -60,6 +60,9 @@ const Sound = (() => {
     summit(c)  { [523, 659, 784, 1047].forEach((f, i) => tone(c, { f, vol: 0.17, d: 0.3, at: i * 0.11 })); },
     win(c)     { [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => tone(c, { f, vol: 0.17, d: 0.28, at: i * 0.12 })); },
     end(c)     { [784, 659, 523].forEach((f, i) => tone(c, { f, vol: 0.15, d: 0.3, at: i * 0.16 })); },
+    combo(c)   { [660, 880, 1100, 1320].forEach((f, i) => tone(c, { f, type: 'triangle', vol: 0.14, d: 0.16, at: i * 0.06 })); },
+    milestone(c) { [784, 988, 1175].forEach((f, i) => tone(c, { f, type: 'triangle', vol: 0.15, d: 0.22, at: i * 0.09 })); },
+    pass(c)    { tone(c, { f: 400, f2: 900, type: 'sine', vol: 0.15, d: 0.2 }); },
     tick(c)    { tone(c, { f: 1000, type: 'square', vol: 0.05, a: 0.003, d: 0.05 }); },
   };
 
